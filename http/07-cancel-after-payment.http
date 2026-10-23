@@ -1,0 +1,49 @@
+### Scenario 7 - cancel after payment: points, stock and credit are given back
+### Run scenario 6 first, or create + pay an order here.
+
+@order = http://localhost:8083
+@customer = http://localhost:8082
+@catalog = http://localhost:8081
+
+# @name cart
+POST {{order}}/carts
+Content-Type: application/json
+
+{ "customerId": 1 }
+
+###
+POST {{order}}/carts/{{cart.response.body.id}}/items
+Content-Type: application/json
+
+{ "sku": "ELC-3002", "qty": 2 }
+
+###
+# @name checkout
+POST {{order}}/carts/{{cart.response.body.id}}/checkout
+Content-Type: application/json
+
+{ "shippingMethod": "STANDARD" }
+
+###
+POST {{order}}/orders/{{checkout.response.body.id}}/pay
+Content-Type: application/json
+
+{ "method": "CARD", "cardNumber": "4111111111111111", "loyaltyPoints": 1000 }
+
+### State before the cancellation
+GET {{customer}}/customers/1/loyalty
+
+###
+GET {{catalog}}/products/ELC-3002
+
+### Cancel: refund 142.24, 1000 points restituted, 118 earned points taken back, stock restocked
+POST {{order}}/orders/{{checkout.response.body.id}}/cancel
+
+### State after: points back to the initial balance, stock +2
+GET {{customer}}/customers/1/loyalty
+
+###
+GET {{catalog}}/products/ELC-3002
+
+### A shipped order cannot be cancelled: create/pay/ship an order, then cancel -> 400
+# POST {{order}}/orders/<id>/cancel

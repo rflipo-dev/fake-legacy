@@ -1,0 +1,58 @@
+### Scenario 5 - B2B customer (5): 200 EUR HT minimum, then payment on credit
+### Customer 5: credit limit 5000, outstanding 2000 (available 3000)
+
+@order = http://localhost:8083
+@customer = http://localhost:8082
+
+### Credit before
+GET {{customer}}/customers/5/credit
+
+### 1. Cart below the minimum (2 x ELC-3001 = 56.81 HT)
+# @name cart
+POST {{order}}/carts
+Content-Type: application/json
+
+{ "customerId": 5 }
+
+###
+POST {{order}}/carts/{{cart.response.body.id}}/items
+Content-Type: application/json
+
+{ "sku": "ELC-3001", "qty": 2 }
+
+### Refused: B2B orders require at least 200.00 EUR HT
+POST {{order}}/carts/{{cart.response.body.id}}/checkout
+Content-Type: application/json
+
+{ "shippingMethod": "STANDARD" }
+
+### 2. Add a chair, checkout works: goodsHt = 369.36
+POST {{order}}/carts/{{cart.response.body.id}}/items
+Content-Type: application/json
+
+{ "sku": "HOM-4002", "qty": 1 }
+
+###
+# @name checkout
+POST {{order}}/carts/{{cart.response.body.id}}/checkout
+Content-Type: application/json
+
+{ "shippingMethod": "STANDARD" }
+
+### 3. Points are forbidden for B2B
+POST {{order}}/orders/{{checkout.response.body.id}}/pay
+Content-Type: application/json
+
+{ "method": "B2B_CREDIT", "loyaltyPoints": 100 }
+
+### 4. Pay on credit (no loyalty points earned for B2B)
+POST {{order}}/orders/{{checkout.response.body.id}}/pay
+Content-Type: application/json
+
+{ "method": "B2B_CREDIT" }
+
+### Credit after: outstanding = 2000 + 443.23
+GET {{customer}}/customers/5/credit
+
+### B2B_CREDIT is refused for a B2C customer (try it on an order of customer 1)
+# POST {{order}}/orders/<id>/pay   { "method": "B2B_CREDIT" }

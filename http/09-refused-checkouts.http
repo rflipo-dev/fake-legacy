@@ -1,0 +1,85 @@
+### Scenario 9 - refused checkouts: blacklisted customer (6), German address (7); Belgian address (8) is accepted (+5.00)
+
+@order = http://localhost:8083
+
+### Customer 6 is blacklisted -> 403
+# @name cart6
+POST {{order}}/carts
+Content-Type: application/json
+
+{ "customerId": 6 }
+
+###
+POST {{order}}/carts/{{cart6.response.body.id}}/items
+Content-Type: application/json
+
+{ "sku": "ELC-3001", "qty": 1 }
+
+###
+POST {{order}}/carts/{{cart6.response.body.id}}/checkout
+Content-Type: application/json
+
+{ "shippingMethod": "STANDARD" }
+
+### Customer 7 ships to Germany -> 400
+# @name cart7
+POST {{order}}/carts
+Content-Type: application/json
+
+{ "customerId": 7 }
+
+###
+POST {{order}}/carts/{{cart7.response.body.id}}/items
+Content-Type: application/json
+
+{ "sku": "ELC-3001", "qty": 1 }
+
+###
+POST {{order}}/carts/{{cart7.response.body.id}}/checkout
+Content-Type: application/json
+
+{ "shippingMethod": "STANDARD" }
+
+### Customer 8 ships to Belgium: 29.90 HT -> 35.88 TTC, STANDARD 4.90 + BE 5.00 = 9.90 shipping
+# @name cart8
+POST {{order}}/carts
+Content-Type: application/json
+
+{ "customerId": 8 }
+
+###
+POST {{order}}/carts/{{cart8.response.body.id}}/items
+Content-Type: application/json
+
+{ "sku": "ELC-3001", "qty": 1 }
+
+###
+POST {{order}}/carts/{{cart8.response.body.id}}/checkout
+Content-Type: application/json
+
+{ "shippingMethod": "STANDARD" }
+
+### Not enough stock (ELC-3005 has a single unit)
+# @name cart3
+POST {{order}}/carts
+Content-Type: application/json
+
+{ "customerId": 3 }
+
+###
+POST {{order}}/carts/{{cart3.response.body.id}}/items
+Content-Type: application/json
+
+{ "sku": "ELC-3005", "qty": 2 }
+
+###
+POST {{order}}/carts/{{cart3.response.body.id}}/checkout
+Content-Type: application/json
+
+{ "shippingMethod": "STANDARD" }
+
+### Inactive product cannot be added
+POST {{order}}/carts/{{cart3.response.body.id}}/items
+Content-Type: application/json
+
+{ "sku": "ELC-9999", "qty": 1 }

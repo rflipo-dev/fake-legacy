@@ -1,0 +1,21 @@
+target/
+.idea/
+*.iml
+.DS_Store
+
+# IDE
+.vscode/
+.classpath
+.project
+.settings/
+*.swp
+
+# Logs and local H2 files
+*.log
+*.mv.db
+*.trace.db
+
+# Local environment
+.env
+.env.*
+PLAN.md

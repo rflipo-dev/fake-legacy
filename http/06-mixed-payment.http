@@ -1,0 +1,55 @@
+### Scenario 6 - mixed payment (points + card) and declined card (number ending with 0000)
+### Customer 1 has 5000 points. 2 x ELC-3002 at GOLD price: goodsHt 160.20, totalTtc 192.24
+### 1000 points = 50 EUR (<= 50% of goodsTtc). Paid by card: 142.24. Points earned: floor(160.20 * (1 - 50/192.24)) = 118
+
+@order = http://localhost:8083
+@customer = http://localhost:8082
+
+# @name cart
+POST {{order}}/carts
+Content-Type: application/json
+
+{ "customerId": 1 }
+
+###
+POST {{order}}/carts/{{cart.response.body.id}}/items
+Content-Type: application/json
+
+{ "sku": "ELC-3002", "qty": 2 }
+
+###
+# @name checkout
+POST {{order}}/carts/{{cart.response.body.id}}/checkout
+Content-Type: application/json
+
+{ "shippingMethod": "STANDARD" }
+
+### Declined card: the order stays VALIDATED
+POST {{order}}/orders/{{checkout.response.body.id}}/pay
+Content-Type: application/json
+
+{ "method": "CARD", "cardNumber": "4111111111110000", "loyaltyPoints": 1000 }
+
+### Not a multiple of 100 -> refused
+POST {{order}}/orders/{{checkout.response.body.id}}/pay
+Content-Type: application/json
+
+{ "method": "CARD", "cardNumber": "4111111111111111", "loyaltyPoints": 150 }
+
+### More than 50% of the goods -> refused by customer-service
+POST {{order}}/orders/{{checkout.response.body.id}}/pay
+Content-Type: application/json
+
+{ "method": "CARD", "cardNumber": "4111111111111111", "loyaltyPoints": 5000 }
+
+### Balance is untouched so far
+GET {{customer}}/customers/1/loyalty
+
+### Mixed payment succeeds
+POST {{order}}/orders/{{checkout.response.body.id}}/pay
+Content-Type: application/json
+
+{ "method": "CARD", "cardNumber": "4111111111111111", "loyaltyPoints": 1000 }
+
+### Balance: 5000 - 1000 + 118
+GET {{customer}}/customers/1/loyalty

@@ -1,0 +1,38 @@
+### Scenario 2 - GOLD customer with MEGA25: the 30% discount cap kicks in
+### Cart: 1 x ELC-3002 (89.00) + 1 x HOM-4001 (34.90) = 123.90 HT
+### tier 10% = 12.39, MEGA25 would be 27.88 -> cap = 37.17, so the promo is reduced to 24.78
+### Expected: goodsHt = 86.73, goodsTtc = 104.08, discountCapApplied = true
+
+@order = http://localhost:8083
+
+### 1. Create the cart
+# @name cart
+POST {{order}}/carts
+Content-Type: application/json
+
+{ "customerId": 1 }
+
+### 2. Add the items
+POST {{order}}/carts/{{cart.response.body.id}}/items
+Content-Type: application/json
+
+{ "sku": "ELC-3002", "qty": 1 }
+
+###
+POST {{order}}/carts/{{cart.response.body.id}}/items
+Content-Type: application/json
+
+{ "sku": "HOM-4001", "qty": 1 }
+
+### 3. Cart estimate (no promo, no shipping)
+GET {{order}}/carts/{{cart.response.body.id}}
+
+### 4. Checkout with the promo
+# @name checkout
+POST {{order}}/carts/{{cart.response.body.id}}/checkout
+Content-Type: application/json
+
+{ "shippingMethod": "STANDARD", "promoCode": "MEGA25" }
+
+### The promo usage is consumed for good
+GET http://localhost:8081/promotions/validate?code=MEGA25

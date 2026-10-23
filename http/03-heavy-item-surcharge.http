@@ -1,0 +1,43 @@
+### Scenario 3 - heavy article: flat 29.00 EUR surcharge for everybody (GOLD included)
+### HOM-4004 (45 kg) for customer 2 (SILVER): 480.00 - 5% = 456.00 HT, 547.20 TTC
+### Standard shipping is free (>= 50 EUR), the surcharge remains: shippingTtc = 29.00, totalTtc = 576.20
+
+@order = http://localhost:8083
+
+### 1. Cart
+# @name cart
+POST {{order}}/carts
+Content-Type: application/json
+
+{ "customerId": 2 }
+
+###
+POST {{order}}/carts/{{cart.response.body.id}}/items
+Content-Type: application/json
+
+{ "sku": "HOM-4004", "qty": 1 }
+
+### 2. Checkout
+POST {{order}}/carts/{{cart.response.body.id}}/checkout
+Content-Type: application/json
+
+{ "shippingMethod": "STANDARD" }
+
+### Same cart content for GOLD customer 1: standard shipping is free but the surcharge still applies
+# @name cartGold
+POST {{order}}/carts
+Content-Type: application/json
+
+{ "customerId": 1 }
+
+###
+POST {{order}}/carts/{{cartGold.response.body.id}}/items
+Content-Type: application/json
+
+{ "sku": "HOM-4004", "qty": 1 }
+
+###
+POST {{order}}/carts/{{cartGold.response.body.id}}/checkout
+Content-Type: application/json
+
+{ "shippingMethod": "STANDARD" }

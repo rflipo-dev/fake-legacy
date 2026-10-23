@@ -1,0 +1,143 @@
+### Remaining endpoints: promotions, price changes, stock, customers, loyalty, credit
+
+@catalog = http://localhost:8081
+@customer = http://localhost:8082
+@order = http://localhost:8083
+
+### --- catalog -------------------------------------------------------------------------------------
+
+### C3 create a product
+POST {{catalog}}/products
+Content-Type: application/json
+
+{ "sku": "NEW-0001", "name": "New gadget", "category": "TOYS", "basePrice": 10.00, "weightKg": 0.5, "stockQuantity": 5 }
+
+### C4 price change: dropping the base price by more than 50% is refused (400)
+PUT {{catalog}}/products/ELC-3001/price
+Content-Type: application/json
+
+{ "basePrice": 10.00 }
+
+### C4 start a sale (salePrice must stay below basePrice)
+PUT {{catalog}}/products/ELC-3001/price
+Content-Type: application/json
+
+{ "salePrice": 24.90 }
+
+### C4 end the sale ("salePrice": null)
+PUT {{catalog}}/products/ELC-3001/price
+Content-Type: application/json
+
+{ "salePrice": null }
+
+### C5 reserve stock (an existing orderRef is only extended)
+POST {{catalog}}/stock/reserve
+Content-Type: application/json
+
+{ "orderRef": "DEMO-1", "items": [ { "sku": "TOY-6001", "qty": 2 } ] }
+
+### C5 same orderRef again: EXTENDED, quantities are not added twice
+POST {{catalog}}/stock/reserve
+Content-Type: application/json
+
+{ "orderRef": "DEMO-1", "items": [ { "sku": "TOY-6001", "qty": 2 } ], "ttlMinutes": 30 }
+
+### C7 confirm the reservation (stock exit)
+POST {{catalog}}/stock/confirm
+Content-Type: application/json
+
+{ "orderRef": "DEMO-1" }
+
+### C7 put it back
+POST {{catalog}}/stock/confirm?restock=true
+Content-Type: application/json
+
+{ "orderRef": "DEMO-1", "items": [ { "sku": "TOY-6001", "qty": 2 } ] }
+
+### C6 release (nothing left to release here)
+POST {{catalog}}/stock/release
+Content-Type: application/json
+
+{ "orderRef": "DEMO-1" }
+
+### C8 promo validation. WELCOME10 (first order only), SAVE5 (min 30), BOOKS15, OLD20 (expired), LIMITED (exhausted), MEGA25
+GET {{catalog}}/promotions/validate?code=WELCOME10&customerId=1
+
+###
+GET {{catalog}}/promotions/validate?code=WELCOME10&customerId=7
+
+###
+GET {{catalog}}/promotions/validate?code=SAVE5&subtotal=20
+
+###
+GET {{catalog}}/promotions/validate?code=OLD20
+
+###
+GET {{catalog}}/promotions/validate?code=LIMITED
+
+### C9 create a promotion
+POST {{catalog}}/promotions
+Content-Type: application/json
+
+{ "code": "SPRING20", "type": "PERCENT", "value": 20, "minOrderAmount": 50, "validFrom": "2026-01-01", "validTo": "2026-12-31", "maxUsage": 100, "allowedCategories": "HOME,SPORT", "firstOrderOnly": false }
+
+### --- customers -----------------------------------------------------------------------------------
+
+### U1 register (errors come back as HTTP 200 with status ERROR)
+POST {{customer}}/customers
+Content-Type: application/json
+
+{ "email": "new.b2b@example.com", "type": "B2B", "companyName": "Widgets Ltd", "vatNumber": "FR98765432109",
+  "addresses": [ { "country": "fr", "city": "Paris", "line": "1 avenue de l'Opera", "defaultShipping": true } ] }
+
+### U1 invalid B2B (no VAT number)
+POST {{customer}}/customers
+Content-Type: application/json
+
+{ "email": "bad.b2b@example.com", "type": "B2B", "companyName": "Widgets Ltd" }
+
+### U2 profile
+GET {{customer}}/customers/2
+
+### U3 replace the addresses (max 5, exactly one default)
+PUT {{customer}}/customers/2/addresses
+Content-Type: application/json
+
+[ { "country": "FR", "city": "Lyon", "line": "5 place Bellecour", "defaultShipping": true },
+  { "country": "BE", "city": "Brussels", "line": "Rue Neuve 10", "defaultShipping": false } ]
+
+### U4 loyalty balance
+GET {{customer}}/customers/2/loyalty
+
+### U5 earn (negative points = clawback)
+POST {{customer}}/customers/2/loyalty/earn
+Content-Type: application/json
+
+{ "points": 250, "orderRef": "MANUAL" }
+
+### U6 redeem (negative = give back); orderAmount is needed for the 50% rule
+POST {{customer}}/customers/2/loyalty/redeem
+Content-Type: application/json
+
+{ "points": 200, "orderAmount": 100, "orderRef": "MANUAL" }
+
+### U7 credit
+GET {{customer}}/customers/5/credit
+
+### U8 consume credit (negative = release)
+POST {{customer}}/customers/5/credit/consume
+Content-Type: application/json
+
+{ "amount": 100.00 }
+
+###
+POST {{customer}}/customers/5/credit/consume
+Content-Type: application/json
+
+{ "amount": -100.00 }
+
+### U9 blacklist / unblock
+POST {{customer}}/customers/3/blacklist
+
+###
+POST {{customer}}/customers/3/blacklist?value=false

@@ -1,0 +1,56 @@
+### Scenario 4 - customer 4 registered today, order above 1000 EUR -> PENDING_REVIEW -> APPROVE -> pay
+### 2 x HOM-4005 (890.00) = 1780.00 HT, 2136.00 TTC + EXPRESS 9.90 + heavy 29.00 = 2174.90
+
+@order = http://localhost:8083
+
+# @name cart
+POST {{order}}/carts
+Content-Type: application/json
+
+{ "customerId": 4 }
+
+###
+POST {{order}}/carts/{{cart.response.body.id}}/items
+Content-Type: application/json
+
+{ "sku": "HOM-4005", "qty": 2 }
+
+### Checkout: status PENDING_REVIEW, reservation held for 24 hours
+# @name checkout
+POST {{order}}/carts/{{cart.response.body.id}}/checkout
+Content-Type: application/json
+
+{ "shippingMethod": "EXPRESS" }
+
+### Paying now is refused (not VALIDATED)
+POST {{order}}/orders/{{checkout.response.body.id}}/pay
+Content-Type: application/json
+
+{ "method": "CARD", "cardNumber": "4111111111111111" }
+
+### Manual review: APPROVE (reservation extended by the standard 15 minutes)
+PUT {{order}}/orders/{{checkout.response.body.id}}/status
+Content-Type: application/json
+
+{ "action": "APPROVE" }
+
+### Payment
+POST {{order}}/orders/{{checkout.response.body.id}}/pay
+Content-Type: application/json
+
+{ "method": "CARD", "cardNumber": "4111111111111111" }
+
+### Alternative: REJECT instead of APPROVE (run on another PENDING_REVIEW order) releases the stock
+# PUT {{order}}/orders/<id>/status   { "action": "REJECT" }
+
+### Fulfilment
+PUT {{order}}/orders/{{checkout.response.body.id}}/status
+Content-Type: application/json
+
+{ "action": "SHIP" }
+
+###
+PUT {{order}}/orders/{{checkout.response.body.id}}/status
+Content-Type: application/json
+
+{ "action": "DELIVER" }

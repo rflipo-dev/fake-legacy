@@ -1,0 +1,26 @@
+### Scenario 1 - catalog price for a GOLD customer (1) vs a STANDARD one (3)
+### Seed: customer 1 = GOLD, 2 = SILVER, 3 = STANDARD (tiers are derived from the order history)
+
+@catalog = http://localhost:8081
+@customer = http://localhost:8082
+
+### Customer 1 profile: tier GOLD (computed from 12-month revenue, cached 10 min)
+GET {{customer}}/customers/1
+
+### Customer 3 profile: tier STANDARD
+GET {{customer}}/customers/3
+
+### Wireless Mouse, GOLD: customerPrice = 29.90 - 10% = 26.91
+GET {{catalog}}/products/ELC-3001?customerId=1
+
+### Wireless Mouse, SILVER: customerPrice = 28.40 (5% discount, rounded on the discount amount)
+GET {{catalog}}/products/ELC-3001?customerId=2
+
+### Wireless Mouse, STANDARD: customerPrice = 29.90
+GET {{catalog}}/products/ELC-3001?customerId=3
+
+### Product on sale (ELC-3004): the sale price wins, no tier discount -> 149.00 for everybody
+GET {{catalog}}/products/ELC-3004?customerId=1
+
+### Filtered list: books under 40 EUR that are available
+GET {{catalog}}/products?category=BOOKS&maxPrice=40&available=true

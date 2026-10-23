@@ -1,0 +1,46 @@
+### Scenario 8 - returns. Uses the seeded orders (fresh start, ids are deterministic):
+###  4  customer 1, delivered 3 days ago: BKS-1001 x2, FOD-2001 x1 (FOOD), ELC-3001 x1
+###  6  customer 2, delivered 20 days ago
+###  11 customer 3, delivered 2 days ago, but 3 returns in the last 90 days
+
+@order = http://localhost:8083
+@customer = http://localhost:8082
+
+### FOOD cannot be returned -> 400
+POST {{order}}/orders/4/return
+Content-Type: application/json
+
+{ "items": [ { "sku": "FOD-2001", "qty": 1 } ] }
+
+### Partial return of 1 book: ratio = 31.24 / 112.72, earned points taken back = floor(103 * ratio) = 28, shipping never refunded
+POST {{order}}/orders/4/return
+Content-Type: application/json
+
+{ "items": [ { "sku": "BKS-1001", "qty": 1 } ] }
+
+### Cannot return more than purchased
+POST {{order}}/orders/4/return
+Content-Type: application/json
+
+{ "items": [ { "sku": "BKS-1001", "qty": 2 } ] }
+
+### Order after the partial return
+GET {{order}}/orders/4
+
+### Customer 1 revenue went down by the returned HT amount
+GET {{order}}/customers/1/orders?stats=true
+
+### Out of the 14-day window -> 400
+POST {{order}}/orders/6/return
+Content-Type: application/json
+
+{ "items": [ { "sku": "TOY-6001", "qty": 1 } ] }
+
+### Abuse (3 returns in 90 days) -> 400
+POST {{order}}/orders/11/return
+Content-Type: application/json
+
+{ "items": [ { "sku": "BKS-1002", "qty": 1 } ] }
+
+### Order history of customer 1
+GET {{order}}/customers/1/orders

@@ -1,0 +1,44 @@
+### Scenario 10 - reservation expiry
+### Start the stack with a 1 minute reservation:
+###   RESERVATION_TTL_MINUTES=1 docker compose up -d --build
+### Then: create the order, wait more than 1 minute, pay -> 400 and the order becomes EXPIRED
+### (the order job runs every 30 s, the catalog job every minute, both release the stock)
+
+@order = http://localhost:8083
+@catalog = http://localhost:8081
+
+# @name cart
+POST {{order}}/carts
+Content-Type: application/json
+
+{ "customerId": 2 }
+
+###
+POST {{order}}/carts/{{cart.response.body.id}}/items
+Content-Type: application/json
+
+{ "sku": "ELC-3001", "qty": 1 }
+
+###
+# @name checkout
+POST {{order}}/carts/{{cart.response.body.id}}/checkout
+Content-Type: application/json
+
+{ "shippingMethod": "STANDARD" }
+
+### Stock is reserved
+GET {{catalog}}/products/ELC-3001
+
+### ... wait more than 1 minute ...
+
+### Pay: refused, order EXPIRED
+POST {{order}}/orders/{{checkout.response.body.id}}/pay
+Content-Type: application/json
+
+{ "method": "CARD", "cardNumber": "4111111111111111" }
+
+###
+GET {{order}}/orders/{{checkout.response.body.id}}
+
+### Stock is back
+GET {{catalog}}/products/ELC-3001
