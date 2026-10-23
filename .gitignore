@@ -18,4 +18,3 @@ target/
 # Local environment
 .env
 .env.*
-PLAN.md
